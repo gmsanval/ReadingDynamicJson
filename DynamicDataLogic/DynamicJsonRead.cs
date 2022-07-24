@@ -31,7 +31,7 @@ namespace DynamicJsonReading.DynamicDataLogic
                         JArray jarray = JArray.Parse(json) as JArray;
                         foreach (var prop in jarray.GetType().GetProperties())
                         {
-                            Console.WriteLine("{0}={1}", prop.Name, prop.GetValue(jarray, null));
+                            //Console.WriteLine("{0}={1}", prop.Name, prop.GetValue(jarray, null));
                         }
                     }
                     if (type.Name == "JObject")
@@ -60,7 +60,7 @@ namespace DynamicJsonReading.DynamicDataLogic
                                     }
                                 }
                             }
-                            Console.WriteLine("{0}:{1}", prop.Name, prop.Value);
+                            //Console.WriteLine("{0}:{1}", prop.Name, prop.Value);
                         }
                     }
                     return JsonConvert.DeserializeObject<dynamic>(json, serializerSettings);
