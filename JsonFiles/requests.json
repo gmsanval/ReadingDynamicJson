@@ -1,0 +1,33 @@
+
+  {
+    "employee": {
+      "name": "John",
+      "age": 30,
+      "city": "New York",
+      "Data": [
+        {
+          "roll": 12,
+          "ctx": "Lahore",
+          "powerHub": "demoApp"
+        }
+      ],
+      "BioDetails": [
+        {
+          "StNames": {
+            "nameAr": "Arshad",
+            "Namedr": "logRun",
+            "duration": 23
+          }
+        },
+        {
+          "St1Names": {
+            "nameAr1": "Arshad1",
+            "Namedr1": "logRun1",
+            "duration1": 23
+          }
+        }
+
+      ]
+    }
+  }
+
