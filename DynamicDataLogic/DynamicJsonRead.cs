@@ -2,7 +2,9 @@
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,7 +13,9 @@ namespace DynamicJsonReading.DynamicDataLogic
 {
     public class DynamicJsonRead
     {
-        public static dynamic Read(string path)
+        public static IDictionary<string,object>? dictionary = null;
+        public static IDictionary<string, object>? newProperiesList = null;
+        public static IDictionary<string, object> Read(string path)
         {
             using (StreamReader file = new StreamReader(path))
             {
@@ -37,33 +41,32 @@ namespace DynamicJsonReading.DynamicDataLogic
                     if (type.Name == "JObject")
                     {
                         JObject jobject = JObject.Parse(json) as JObject;
+                        
                         foreach (var prop in jobject.Properties())
                         {
-                            if (prop.Value.Type == JTokenType.Property)
-                            {
-                                DealWithProperty(prop);
-                            }
                             if (prop.Value.Type == JTokenType.Object)
                             {
-                                JObject jobject1 = JObject.Parse(prop.Value.ToString()) as JObject;
-                                DealWithJObject(jobject1);
+                                var obj = new JObject();
+                                dynamic flexible = new ExpandoObject();
+                                dictionary = (IDictionary<string, object>)flexible;
+                                dictionary.Add(prop.Name, obj);
+                                CreateJsonProperty(prop, true);
                             }
-                            if (prop.Value.Type == JTokenType.Array)
+                            if (prop.Value.Type == JTokenType.String)
                             {
-                                JArray jarray = JArray.Parse(json) as JArray;
-                                foreach (var prop2 in jarray)
-                                {
-                                    JObject jobject1 = JObject.Parse(prop2.ToString()) as JObject;
-                                    foreach (var prop1 in jobject1.Properties())
-                                    {
-                                        Console.WriteLine("{0}:{1}", prop1.Name, prop1.Value);
-                                    }
-                                }
+                                CreateJsonProperty(prop, false);
                             }
-                            //Console.WriteLine("{0}:{1}", prop.Name, prop.Value);
+                            if (prop.Value.Type == JTokenType.Integer)
+                            {
+                                CreateJsonProperty(prop, false);
+                            }
+                            if (prop.Value.Type == JTokenType.Boolean)
+                            {
+                                CreateJsonProperty(prop, false);
+                            }
                         }
                     }
-                    return JsonConvert.DeserializeObject<dynamic>(json, serializerSettings);
+                    return dictionary;
                 }
                 catch (Exception ex)
                 {
@@ -72,76 +75,90 @@ namespace DynamicJsonReading.DynamicDataLogic
                 }
             }
         }
-
-
-        public static object GetPropValue(object src, string propName)
+        public static void CreateJsonProperty(JProperty property,bool isObjectProp)
         {
-            return src.GetType().GetProperty(propName).GetValue(src, null);
+            if(isObjectProp == false && property.Value.Type == JTokenType.Property)
+            {
+                dictionary.Add(property.Name, property.Value);
+            }
+            if (isObjectProp == true && property.Value.Type == JTokenType.Object)
+            {
+                JObject jobject = JObject.Parse(property.Value.ToString()) as JObject;
+                CreateJsonObjectProperties(jobject, true, property.Name);
+            }
+
+
         }
 
-
-        public static void DealWithJArray(JArray jArray)
+        public static void CreateJsonObjectProperties(JObject joject, bool isObjectProp,string key)
         {
-            JArray jarray = JArray.Parse(jArray.ToString()) as JArray;
-            foreach (var jobj in jarray)
+            dynamic flexible = new ExpandoObject();
+            var newProperies = (IDictionary<string, object>)flexible;
+            foreach (var prop in joject.Properties())
             {
-                JObject jobject = JObject.Parse(jobj.ToString()) as JObject;
-                DealWithJObject(jobject);
-            }
-        }
-
-        public static void DealWithProperty(JProperty jProperty)
-        {
-            if (jProperty.Value.Type == JTokenType.String)
-            {
-                Console.WriteLine("{0}:{1}", jProperty.Name, jProperty.Value);
-            }
-            if (jProperty.Value.Type == JTokenType.Integer)
-            {
-                Console.WriteLine("{0}:{1}", jProperty.Name, jProperty.Value);
-            }
-            else if (jProperty.Value.Type == JTokenType.Object)
-            {
-                JObject jobject = JObject.Parse(jProperty.Value.ToString()) as JObject;
-                foreach (var prop in jobject.Properties())
+                if(prop.Value.Type == JTokenType.Array)
                 {
-                    if (prop.Value.Type == JTokenType.Object)
-                    {
-                        DealWithJObject(jobject);
-                    }
-                    else if (prop.Value.Type == JTokenType.Array)
-                    {
-                        JArray jarray = JArray.Parse(prop.Value.ToString()) as JArray;
-                        DealWithJArray(jarray);
-                    }
-                    else if (prop.Value.Type == JTokenType.String)
-                    {
-                        Console.WriteLine("{0}:{1}", prop.Name, prop.Value);
-                    }
-                    else if (prop.Value.Type == JTokenType.Integer)
-                    {
-                        Console.WriteLine("{0}:{1}", prop.Name, prop.Value);
-                    }
-
+                    dictionary[key] = JsonConvert.SerializeObject(newProperies);
+                    JArray jarray = JArray.Parse(prop.Value.ToString()) as JArray;
+                    CreateJsonArryObjects(jarray, key, prop.Name);
+                }
+                else
+                {
+                    newProperies.Add(prop.Name, prop.Value);
+                    dictionary[key] = JsonConvert.SerializeObject(newProperies);
                 }
             }
-            else if (jProperty.Value.Type == JTokenType.Array)
+        }
+        public static void CreateJsonArryObjects(JArray jArray,string parentKey, string key)
+        {
+            dynamic flexible1 = new ExpandoObject();
+            newProperiesList = (IDictionary<string, object>)flexible1;
+            foreach (var jobj in jArray)
             {
-                JArray jarray = JArray.Parse(jProperty.Value.ToString()) as JArray;
-                DealWithJArray(jarray);
+                JObject jobject = JObject.Parse(jobj.ToString()) as JObject;
+                CreateJsonArrayObjectProperties(jobject, parentKey, key);
             }
         }
 
-        public static void DealWithJObject(JObject keyValues)
+        public static void CreateJsonArrayObjectProperties(JObject joject, string parentKey, string key)
         {
-
-            foreach (var prop in keyValues.Properties())
+            dynamic flexible = new ExpandoObject();
+            var newProperies = (IDictionary<string, object>)flexible;
+            foreach (var prop in joject.Properties())
             {
-                DealWithProperty(prop);
+                if (prop.Value.Type == JTokenType.Object)
+                {
+                    newProperiesList.Add(prop.Name, new JObject());
+                    JObject jobject = JObject.Parse(prop.Value.ToString()) as JObject;
+                    CreateJsonArryObjectProperties(jobject, key, prop.Name);
+                }
+                else
+                {
+                    newProperies.Add(prop.Name, prop.Value);
+                    dictionary[key] = JsonConvert.SerializeObject(newProperies);
+                }
             }
+            
+        }
 
+        public static void CreateJsonArryObjectProperties(JObject joject, string parentKey, string key)
+        {
+            dynamic flexible = new ExpandoObject();
+            var newProperies = (IDictionary<string, object>)flexible;
+            foreach (var prop in joject.Properties())
+            {
+                if (prop.Value.Type == JTokenType.Object)
+                {
+                    JObject jobject = JObject.Parse(prop.Value.ToString()) as JObject;
+                    CreateJsonArryObjectProperties(jobject, key, prop.Name);
+                }
+                else if (prop.Value.Type == JTokenType.String || prop.Value.Type == JTokenType.Integer)
+                {
+                    newProperies.Add(prop.Name, prop.Value);
+                }
+            }
+            newProperiesList[key] = JsonConvert.SerializeObject(newProperies);
+            dictionary[parentKey] = JsonConvert.SerializeObject(newProperiesList);
         }
     }
-
-
 }
